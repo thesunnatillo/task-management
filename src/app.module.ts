@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from './modules/auth/auth.module';
-import { TasksService } from './modules/tasks/tasks.service';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Users } from './modules/auth/entities/auth.entity';
@@ -23,6 +22,6 @@ dotenv.config();
     }),
   ],
   controllers: [],
-  providers: [TasksService],
+  providers: [],
 })
 export class AppModule {}

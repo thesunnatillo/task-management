@@ -3,7 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Users } from './entities/auth.entity';
 import { Repository } from 'typeorm';
 import { SignupDto } from './dto/signup.dto';
-import { LoginAlreadyUsed, UsernameOrPasswordWrong } from './exception/auth.exception';
+import {
+  LoginAlreadyUsed,
+  UsernameOrPasswordWrong,
+} from './exception/auth.exception';
 import { LogInI, SignUpI } from './interfaces/auth.i';
 import { LogInDto } from './dto/login.dto';
 
