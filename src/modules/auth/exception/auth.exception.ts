@@ -11,3 +11,9 @@ export class UsernameOrPasswordWrong extends HttpException {
     super('Username yoki Password xato!', HttpStatus.FORBIDDEN);
   }
 }
+
+export class InvalidCode extends HttpException {
+  constructor() {
+    super('Yaroqsiz encode!', HttpStatus.FORBIDDEN);
+  }
+}
