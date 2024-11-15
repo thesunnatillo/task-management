@@ -1,13 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Tasks } from './entities/task.entity';
-import { In, Repository } from 'typeorm';
+import { In, LessThan, Repository } from 'typeorm';
 import { CreateDto } from './dto/create.dto';
 import { Users } from '../auth/entities/auth.entity';
 import { RedisService } from '../../redis/redis.service';
 import { InvalidCode } from '../auth/exception/auth.exception';
 import { UpdateDto } from './dto/update.dto';
 import { DoNotAllow } from './exception/tasks.exception';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Injectable()
 export class TasksService {
@@ -18,6 +19,26 @@ export class TasksService {
     private readonly tasksRepo: Repository<Tasks>,
     private readonly redisService: RedisService,
   ) {}
+
+  @Cron(CronExpression.EVERY_30_SECONDS)
+  async archivedTask() {
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+    const oldTasks = await this.tasksRepo.find({
+      where: {
+        status: 'completed',
+        createdAt: LessThan(oneWeekAgo),
+      },
+    });
+
+    for (const task of oldTasks) {
+      task.status = 'archived';
+      await this.tasksRepo.save(task);
+    }
+
+    console.log(`${oldTasks.length} ta vazifa arxivlandi`);
+  }
 
   async create(createDto: CreateDto, encoded: string) {
     const username = Buffer.from(encoded, 'base64')
