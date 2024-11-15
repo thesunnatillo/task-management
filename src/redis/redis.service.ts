@@ -19,7 +19,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async set(key: string, value: string) {
-    await this.client.set(key, value);
+    await this.client.set(key, value, 'EX', 3600);
   }
 
   async get(key: string) {
