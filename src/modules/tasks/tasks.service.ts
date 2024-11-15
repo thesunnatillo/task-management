@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Tasks } from './entities/task.entity';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { CreateDto } from './dto/create.dto';
 import { Users } from '../auth/entities/auth.entity';
 import { RedisService } from '../../redis/redis.service';
 import { InvalidCode } from '../auth/exception/auth.exception';
+import { UpdateDto } from './dto/update.dto';
+import { DoNotAllow } from './exception/tasks.exception';
 
 @Injectable()
 export class TasksService {
@@ -43,11 +45,126 @@ export class TasksService {
     return savedTask;
   }
 
-  async getAll() {}
+  async getAll(encoded: string) {
+    const username = Buffer.from(encoded, 'base64')
+      .toString('ascii')
+      .split(':')[0];
+    const user = await this.usersRepo.findOne({
+      where: { username: username },
+    });
 
-  async update() {}
+    if (!user) {
+      throw new InvalidCode();
+    }
 
-  async delete() {}
+    return await this.tasksRepo.find({
+      where: {
+        status: In(['completed', 'pending']),
+        user: { id: user.id },
+      },
+    });
+  }
 
-  async getOne() {}
+  async update(updateDto: UpdateDto, task_id: number, encoded: string) {
+    const username = Buffer.from(encoded, 'base64')
+      .toString('ascii')
+      .split(':')[0];
+    const user = await this.usersRepo.findOne({
+      where: { username: username },
+    });
+
+    if (!user) {
+      throw new InvalidCode();
+    }
+
+    const task = await this.tasksRepo.findOne({
+      where: { id: task_id },
+      relations: ['user'],
+    });
+    if (!task) {
+      return {
+        message: 'Not found',
+      };
+    }
+    if (task.user.id !== user.id) {
+      throw new DoNotAllow();
+    }
+
+    await this.tasksRepo.update(task_id, { ...updateDto });
+    await this.redisService.del(`task:${task_id}`);
+    return {
+      message: 'Updated',
+    };
+  }
+
+  async delete(task_id: number, encoded: string) {
+    const username = Buffer.from(encoded, 'base64')
+      .toString('ascii')
+      .split(':')[0];
+    const user = await this.usersRepo.findOne({
+      where: { username: username },
+    });
+
+    if (!user) {
+      throw new InvalidCode();
+    }
+
+    const task = await this.tasksRepo.findOne({
+      where: { id: task_id },
+      relations: ['user'],
+    });
+    if (!task) {
+      return {
+        message: 'Not found',
+      };
+    }
+
+    await this.tasksRepo.remove(task);
+    return {
+      message: 'Task Deleted',
+    };
+  }
+
+  async getOne(task_id: number, encoded: string) {
+    const username = Buffer.from(encoded, 'base64')
+      .toString('ascii')
+      .split(':')[0];
+    const user = await this.usersRepo.findOne({
+      where: { username: username },
+    });
+
+    if (!user) {
+      throw new InvalidCode();
+    }
+
+    const fromRedis = await this.redisService.get(`task:${task_id}`);
+    const task_from_redis = JSON.parse(fromRedis);
+
+    if (fromRedis) {
+      if (task_from_redis.user.id !== user.id) {
+        throw new DoNotAllow();
+      } else {
+        return task_from_redis;
+      }
+    } else {
+      const task = await this.tasksRepo.findOne({
+        where: { id: task_id },
+        relations: ['user'],
+      });
+
+      if (!task) {
+        return {
+          message: 'Not found',
+        };
+      }
+
+      if (task.user.id !== user.id) {
+        throw new DoNotAllow();
+      }
+
+      await this.redisService.set(`task:${task_id}`, JSON.stringify(task));
+
+      return task;
+    }
+  }
 }

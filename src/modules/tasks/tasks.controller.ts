@@ -1,7 +1,8 @@
-import { Body, Controller, Delete, Get, Post, Put, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Req } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { CreateDto } from './dto/create.dto';
 import { Request } from 'express';
+import { UpdateDto } from './dto/update.dto';
 
 @Controller('tasks')
 export class TasksController {
@@ -14,14 +15,30 @@ export class TasksController {
   }
 
   @Get()
-  getAll() {}
+  getAll(@Req() req: Request) {
+    const encoded = req.headers.authorization.split(' ')[1];
+    return this.tasksService.getAll(encoded);
+  }
 
   @Put(':id')
-  update() {}
+  update(
+    @Param('id') id: number,
+    @Body() updateDto: UpdateDto,
+    @Req() req: Request,
+  ) {
+    const encoded = req.headers.authorization.split(' ')[1];
+    return this.tasksService.update(updateDto, id, encoded);
+  }
 
   @Delete(':id')
-  delete() {}
+  delete(@Param('id') id: number, @Req() req: Request) {
+    const encoded = req.headers.authorization.split(' ')[1];
+    return this.tasksService.delete(id, encoded);
+  }
 
   @Get(':id')
-  getOne() {}
+  getOne(@Param('id') id: number, @Req() req: Request) {
+    const encoded = req.headers.authorization.split(' ')[1];
+    return this.tasksService.getOne(id, encoded);
+  }
 }
